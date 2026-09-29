@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reels CC Studio - Alight Web</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: #0b0d13;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            font-size: 16px;
+            margin: 6px 0;
+            color: #ff2a5f;
+            text-align: center;
+            font-weight: 700;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            background: #141722;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+            border: 1px solid #202433;
+        }
+        .preview-box {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 220px;
+        }
+        video, canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .btn {
+            background: linear-gradient(135deg, #0055ff, #00bfff);
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .export-btn {
+            background: linear-gradient(135deg, #ff2a5f, #ff6a3d);
+            margin-top: 8px;
+        }
+        .section-title {
+            font-size: 12px;
+            color: #8b92a5;
+            margin: 8px 0 5px 0;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .luts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+            max-height: 190px;
+            overflow-y: auto;
+        }
+        .lut-card {
+            background: #1b1f2e;
+            border: 2px solid #282f45;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            color: #c5cbd3;
+            transition: 0.2s;
+        }
+        .lut-card:hover, .lut-card.active {
+            border-color: #ff2a5f;
+            background: #251e2e;
+            color: #ffffff;
+        }
+        .status-text {
+            font-size: 11px;
+            text-align: center;
+            color: #00d2ff;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h2>🔥 Reels Trending CC Studio</h2>
+        
+        <!-- Video Upload -->
+        <input type="file" id="videoUpload" accept="video/*" style="display:none">
+        <button class="btn" onclick="document.getElementById('videoUpload').click()">+ Upload Reels Video</button>
+
+        <div class="preview-box">
+            <video id="videoPlayer" crossorigin="anonymous" playsinline controls></video>
+            <canvas id="outputCanvas"></canvas>
+        </div>
+
+        <div class="section-title">Select Instagram Reels CC</div>
+        
+        <!-- Trending Reels CC Presets -->
+        <div class="luts-grid">
+            <div class="lut-card active" onclick="applyReelsCC('normal', this)">Original</div>
+            <div class="lut-card" onclick="applyReelsCC('glowcc', this)">✨ Soft Glow CC</div>
+            <div class="lut-card" onclick="applyReelsCC('darkmood', this)">🖤 Dark Aesthetic CC</div>
+            <div class="lut-card" onclick="applyReelsCC('vibrant', this)">💖 Vibrant Pop CC</div>
+            <div class="lut-card" onclick="applyReelsCC('purpledream', this)">💜 Purple Dream CC</div>
+            <div class="lut-card" onclick="applyReelsCC('hdrsharp', this)">💎 Ultra HDR Reels CC</div>
+            <div class="lut-card" onclick="applyReelsCC('cinematic', this)">🎬 Cinematic Teal CC</div>
+            <div class="lut-card" onclick="applyReelsCC('retro', this)">📼 90s Vintage CC</div>
+        </div>
+
+        <button class="btn export-btn" onclick="startVideoExport()">Export & Download Reel</button>
+        <div class="status-text" id="exportStatus">Ready: Select a Reels CC to apply</div>
+    </div>
+
+    <script>
+        const videoUpload = document.getElementById('videoUpload');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentCC = 'normal';
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        videoUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                videoPlayer.src = url;
+                videoPlayer.load();
+                videoPlayer.onloadedmetadata = () => {
+                    canvas.width = videoPlayer.videoWidth || 1280;
+                    canvas.height = videoPlayer.videoHeight || 720;
+                    videoPlayer.play();
+                    requestAnimationFrame(renderFrame);
+                };
+            }
+        });
+
+        function applyReelsCC(ccName, element) {
+            currentCC = ccName;
+            document.querySelectorAll('.lut-card').forEach(card => card.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('exportStatus').innerText = `Applied: ${element.innerText}`;
+        }
+
+        function renderFrame() {
+            if (!videoPlayer.paused && !videoPlayer.ended) {
+                ctx.save();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Trending Instagram Reels CC filters coding
+                if (currentCC === 'glowcc') {
+                    ctx.filter = 'brightness(120%) contrast(125%) saturate(140%) blur(0.4px)';
+                } else if (currentCC === 'darkmood') {
+                    ctx.filter = 'brightness(75%) contrast(160%) saturate(60%) hue-rotate(-15deg)';
+                } else if (currentCC === 'vibrant') {
+                    ctx.filter = 'brightness(110%) contrast(130%) saturate(190%)';
+                } else if (currentCC === 'purpledream') {
+                    ctx.filter = 'brightness(115%) contrast(120%) saturate(150%) hue-rotate(45deg)';
+                } else if (currentCC === 'hdrsharp') {
+                    ctx.filter = 'contrast(170%) saturate(150%) brightness(105%)';
+                } else if (currentCC === 'cinematic') {
+                    ctx.filter = 'brightness(100%) contrast(140%) saturate(120%) hue-rotate(20deg)';
+                } else if (currentCC === 'retro') {
+                    ctx.filter = 'sepia(35%) contrast(120%) brightness(95%) saturate(85%)';
+                } else {
+                    ctx.filter = 'none';
+                }
+
+                ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+
+                // Reels style cinematic vignette effect
+                if (currentCC !== 'normal') {
+                    let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/4, canvas.width/2, canvas.height/2, canvas.width/1.1);
+                    grad.addColorStop(0, 'rgba(0,0,0,0)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0.35)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                ctx.restore();
+            }
+            requestAnimationFrame(renderFrame);
+        }
+
+        function startVideoExport() {
+            const status = document.getElementById('exportStatus');
+            if (!videoPlayer.src) {
+                alert("Pehle Reels video upload karein!");
+                return;
+            }
+
+            status.innerText = "Processing Reel with CC... Please wait.";
+            recordedChunks = [];
+
+            const stream = canvas.captureStream(30);
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Reels_CC_Video_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                status.innerText = "Reel successfully downloaded!";
+            };
+
+            videoPlayer.pause();
+            videoPlayer.currentTime = 0;
+            videoPlayer.play();
+            mediaRecorder.start();
+
+            videoPlayer.onended = function() {
+                mediaRecorder.stop();
+            };
+        }
+    </script>
+</body>
+</html>
